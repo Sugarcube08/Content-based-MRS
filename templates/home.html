@@ -1,12 +1,57 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <link rel="stylesheet" href="{{url_for('static', filename='css/output.css')}}">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Document</title>
-</head>
-<body>
-    this is a test document
-</body>
-</html>
+{% extends 'subtemplate/base.html' %}
+{% block title %}
+Home
+{% endblock title %}
+
+{% block body %}
+<div class="m-5">
+    <div class="min-h-screen w-full flex flex-col items-center text-white">
+        <h1 class="text-3xl font-bold mb-6">Movie Recommendation System by Sugarcube08</h1>
+
+        <!-- search bar -->
+        <form action="{{ url_for('search') }}" method="post">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <input type="text" name="query" class="border-2 border-white rounded-xl h-[5vh] w-[50vw] p-4 text-black"
+                placeholder="Search...">
+        </form>
+
+        <div class="container mx-auto p-6">
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+                {% for movie in movies %}
+                <!-- Wrap each card in a form -->
+                <form method="POST" action="{{ url_for('search') }}">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" hidden>
+                    <input type="hidden" name="query" value="{{ movie.title }}">
+                    <button type="submit" class="w-full text-left">
+                        {% set movie = movie %} {# pass into the include #}
+                        {% include 'components/moviecard.html' %}
+                    </button>
+                </form>
+                {% endfor %}
+            </div>
+
+            <!-- Pagination -->
+            {% if total_pages > 1 %}
+            <div class="mt-10 flex justify-center space-x-2">
+                <!-- Previous Button -->
+                {% if current_page > 1 %}
+                <a href="{{ url_for('home', page=current_page-1) }}"
+                    class="bg-white text-black px-4 py-2 rounded hover:bg-gray-300">Previous</a>
+                {% endif %}
+
+                <!-- current page number -->
+                <p class="px-4 py-2 rounded hover:bg-gray-300">
+                    Page {{ current_page }} of {{ total_pages }}
+                </p>
+                <!-- Next Button -->
+                {% if current_page < total_pages %} <a href="{{ url_for('home', page=current_page+1) }}"
+                    class="bg-white text-black px-4 py-2 rounded hover:bg-gray-300">Next</a>
+                    {% endif %}
+            </div>
+            {% endif %}
+
+        </div>
+    </div>
+</div>
+{% endblock body %}

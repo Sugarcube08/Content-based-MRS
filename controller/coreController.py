@@ -1,26 +1,33 @@
-from flask import Blueprint, render_template
+from flask import render_template, request
+from fuzzywuzzy import process
+from initiar import cbRecommendation, movies
 
 class CoreController:
-    def cbRecommendation(title, movies_df, cosine_sim_matrix, titleToIndex, top_n=5):
-        if title not in titleToIndex:
-            return f"Movie '{title}' not found in the dataset."
+    def __init__(self):
+        self.movies_df = movies  # Assume DataFrame with 'title' column
 
-        idx = titleToIndex[title]
-        sim_scores = list(enumerate(cosine_sim_matrix[idx]))
+    def search(self):
+        if request.method == "POST":
+            movie_query = request.form.get("query")
+            all_titles = self.movies_df['title'].tolist()
 
-        # Sort by similarity score in descending order, accessing the scalar value
-        sim_scores = sorted(sim_scores, key=lambda x: x[1], reverse=True)
+            # Find close matches using fuzzy search
+            close_matches = process.extract(movie_query, all_titles, limit=5)
+            best_match_title = close_matches[0][0] if close_matches else None
 
-        # Skip the first movie (itself) and get top_n results
-        sim_scores = sim_scores[1:top_n+1]
+            # Whether it's an exact match or not, get recommendations using the best match
+            if best_match_title:
+                recommendations_df = cbRecommendation(best_match_title, self.movies_df, top_n=5)
+                recommendations = recommendations_df.to_dict(orient='records')
+            else:
+                recommendations = []
 
-        movie_indices = [i[0] for i in sim_scores]
-        similarity_scores = [i[1] for i in sim_scores]
+            return render_template(
+                "search.html",
+                movieName=movie_query,
+                matchedName=best_match_title if movie_query != best_match_title else None,
+                recommendations=recommendations
+            )
 
-        recommendations = pd.DataFrame({
-            'Title': movies_df['title'].iloc[movie_indices].values,
-            'Similarity Score': similarity_scores,
-            'Genre': movies_df['genre_string'].iloc[movie_indices].values
-        })
-
-        return recommendations.reset_index(drop=True)
+        # GET request fallback
+        return render_template("search.html", movieName=None, matchedName=None, recommendations=[])

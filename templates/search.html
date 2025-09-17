@@ -1,0 +1,46 @@
+{% extends 'subtemplate/base.html' %}
+{% block title %}
+Search Results
+{% endblock title %}
+
+{% block body %}
+<div class="m-5">
+    <div class="min-h-screen w-full flex flex-col items-center text-white">
+        <h1 class="text-3xl font-bold mb-6">Results for "{{ movieName }}"</h1>
+
+        {% if matchedName %}
+        <p class="mb-4 text-lg text-yellow-400">Showing results for <strong>"{{ matchedName }}"</strong> instead</p>
+        {% endif %}
+
+        <div class="container mx-auto p-6">
+            {% if recommendations and recommendations|length > 0 %}
+                <!-- Recommendations Grid -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+                    {% for movie in recommendations %}
+                        <!-- Wrap each card in a form -->
+                        <form method="POST" action="{{ url_for('search') }}">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" hidden>
+                            <input type="hidden" name="query" value="{{ movie.title }}">
+                            <button type="submit" class="w-full text-left">
+                                {% set movie = movie %}  {# pass into the include #}
+                                {% include 'components/moviecard.html' %}
+                            </button>
+                        </form>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <div class="text-center text-xl text-gray-300 mt-10">
+                    <p>No recommendations found for "{{ movieName }}".</p>
+                </div>
+            {% endif %}
+        </div>
+
+        <!-- Back Button -->
+        <div class="mt-8">
+            <a href="{{ url_for('home') }}" class="bg-white text-black px-6 py-2 rounded shadow hover:bg-gray-300">
+                ⬅ Back to Home
+            </a>
+        </div>
+    </div>
+</div>
+{% endblock body %}
