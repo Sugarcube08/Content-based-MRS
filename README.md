@@ -36,6 +36,10 @@ Welcome! This project is a friendly, full-stack web app that helps you discover 
 
     Open your browser and go to [http://localhost:5000](http://localhost:5000)
 
+### Or just run
+    
+`Windows.bat` file on Windows
+
 ## How to Use the Web App
 
 - Search for any movie you like.
