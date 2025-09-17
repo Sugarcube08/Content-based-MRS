@@ -16,7 +16,7 @@ def run_setup():
     os_type = platform.system()
     print("📦 Installing Python requirements...")
     try:
-        subprocess.run([sys.executable, "-m", "pip", "install", "-r", "requirements.txt"], check=True)
+        subprocess.run([sys.executable, "-m", "pip", "install", "-r", "requirements.txt","-q"], check=True)
     except subprocess.CalledProcessError as e:
         print(f"❌ Error installing Python requirements: {e}")
         return
