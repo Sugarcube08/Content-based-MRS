@@ -1,33 +1,63 @@
 from flask import render_template, request
-from fuzzywuzzy import process
-from initiar import cbRecommendation, movies
+from fuzzywuzzy import process, fuzz
+from initiar import cbRecommendation, movies  # your existing imports
+
 
 class CoreController:
     def __init__(self):
-        self.movies_df = movies  # Assume DataFrame with 'title' column
+        self.movies_df = movies
+        self.all_titles = [t.lower() for t in self.movies_df['title'].tolist()]
+        genre_strings = self.movies_df['genre_string'].dropna().tolist()
+        self.all_genres = list(set(
+            g.lower()
+            for gs in genre_strings
+            for g in gs.split()
+        ))
 
     def search(self):
         if request.method == "POST":
-            movie_query = request.form.get("query")
-            all_titles = self.movies_df['title'].tolist()
+            movie_query = request.form.get("query", "").strip()
+            if not movie_query:
+                return render_template("search.html", movieName=None, matchedName=None, recommendations=[])
 
-            # Find close matches using fuzzy search
-            close_matches = process.extract(movie_query, all_titles, limit=5)
-            best_match_title = close_matches[0][0] if close_matches else None
+            query_lower = movie_query.lower()
+            title_match = process.extractOne(query_lower, self.all_titles, scorer=fuzz.WRatio)
+            best_title, title_score = title_match if title_match else (None, 0)
+            query_tokens = query_lower.split()
+            matched_genres = set()
+            for token in query_tokens:
+                genre_match = process.extractOne(token, self.all_genres, scorer=fuzz.WRatio)
+                if genre_match and genre_match[1] >= 70: 
+                    matched_genres.add(genre_match[0])
 
-            # Whether it's an exact match or not, get recommendations using the best match
-            if best_match_title:
-                recommendations_df = cbRecommendation(best_match_title, self.movies_df, top_n=5)
+            recommendations = []
+            matched_name = None
+
+            max_genre_score = 100 if matched_genres else 0  
+            if best_title and title_score >= 70 and title_score >= max_genre_score:
+                original_title = self.movies_df['title'].iloc[self.all_titles.index(best_title)]
+                recommendations_df = cbRecommendation(original_title, self.movies_df)
                 recommendations = recommendations_df.to_dict(orient='records')
+                matched_name = original_title if movie_query.lower() != best_title else None
+
+            elif matched_genres:
+                def genre_filter(gs):
+                    gs_lower = gs.lower()
+                    return any(g in gs_lower for g in matched_genres)
+
+                genre_filtered = self.movies_df[self.movies_df['genre_string'].apply(genre_filter)]
+                recommendations = genre_filtered.head(20).to_dict(orient='records')
+                matched_name = f"Genres: {', '.join(matched_genres)}" if len(matched_genres) > 0 else None
+
             else:
+                matched_name = None
                 recommendations = []
 
             return render_template(
                 "search.html",
                 movieName=movie_query,
-                matchedName=best_match_title if movie_query != best_match_title else None,
+                matchedName=matched_name,
                 recommendations=recommendations
             )
 
-        # GET request fallback
         return render_template("search.html", movieName=None, matchedName=None, recommendations=[])
