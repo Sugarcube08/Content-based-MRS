@@ -1,7 +1,6 @@
 from flask import render_template, request
 from fuzzywuzzy import process, fuzz
-from initiar import cbRecommendation, movies  # your existing imports
-
+from initiar import cbRecommendation, movies  
 
 class CoreController:
     def __init__(self):
@@ -41,13 +40,13 @@ class CoreController:
                 matched_name = original_title if movie_query.lower() != best_title else None
 
             elif matched_genres:
-                def genre_filter(gs):
-                    gs_lower = gs.lower()
-                    return any(g in gs_lower for g in matched_genres)
-
-                genre_filtered = self.movies_df[self.movies_df['genre_string'].apply(genre_filter)]
-                recommendations = genre_filtered.head(20).to_dict(orient='records')
-                matched_name = f"Genres: {', '.join(matched_genres)}" if len(matched_genres) > 0 else None
+                filtered_movies = self.movies_df[
+                    self.movies_df['genre_string'].apply(
+                        lambda genres: all(genre.lower() in genres.lower() for genre in matched_genres)
+                    )
+                ]
+                recommendations = filtered_movies.to_dict(orient='records')
+                matched_name = ', '.join(matched_genres) if len(matched_genres) > 1 else list(matched_genres)[0]
 
             else:
                 matched_name = None
